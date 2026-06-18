@@ -1,0 +1,231 @@
+#! /opt/homebrew/Cellar/icarus-verilog/13.0/bin/vvp
+:ivl_version "13.0 (stable)" "(v13_0)";
+:ivl_delay_selection "TYPICAL";
+:vpi_time_precision + 0;
+:vpi_module "/opt/homebrew/Cellar/icarus-verilog/13.0/lib/ivl/system.vpi";
+:vpi_module "/opt/homebrew/Cellar/icarus-verilog/13.0/lib/ivl/vhdl_sys.vpi";
+:vpi_module "/opt/homebrew/Cellar/icarus-verilog/13.0/lib/ivl/vhdl_textio.vpi";
+:vpi_module "/opt/homebrew/Cellar/icarus-verilog/13.0/lib/ivl/v2005_math.vpi";
+:vpi_module "/opt/homebrew/Cellar/icarus-verilog/13.0/lib/ivl/va_math.vpi";
+:vpi_module "/opt/homebrew/Cellar/icarus-verilog/13.0/lib/ivl/v2009.vpi";
+S_0x129813540 .scope package, "$unit" "$unit" 2 1;
+ .timescale 0 0;
+S_0x129808cf0 .scope module, "tb_regfile" "tb_regfile" 3 1;
+ .timescale 0 0;
+v0x12982a8e0_0 .var "clk", 0 0;
+v0x12982a970_0 .var "rd_addr", 4 0;
+v0x12982aa00_0 .var "rd_data", 31 0;
+v0x12982aa90_0 .var "reg_write_en", 0 0;
+v0x12982ab20_0 .var "rs1_addr", 4 0;
+v0x12982abf0_0 .net "rs1_data", 31 0, L_0x12982b1b0;  1 drivers
+v0x12982aca0_0 .var "rs2_addr", 4 0;
+v0x12982ad50_0 .net "rs2_data", 31 0, L_0x12982b6e0;  1 drivers
+S_0x129808e60 .scope module, "dut" "regfile" 3 9, 4 1 0, S_0x129808cf0;
+ .timescale 0 0;
+    .port_info 0 /INPUT 1 "clk";
+    .port_info 1 /INPUT 5 "rs1_addr";
+    .port_info 2 /INPUT 5 "rs2_addr";
+    .port_info 3 /INPUT 5 "rd_addr";
+    .port_info 4 /INPUT 32 "rd_data";
+    .port_info 5 /INPUT 1 "reg_write_en";
+    .port_info 6 /OUTPUT 32 "rs1_data";
+    .port_info 7 /OUTPUT 32 "rs2_data";
+L_0x130078010 .functor BUFT 1, C4<00000>, C4<0>, C4<0>, C4<0>;
+v0x129816d20_0 .net/2u *"_ivl_0", 4 0, L_0x130078010;  1 drivers
+L_0x1300780a0 .functor BUFT 1, C4<00000000000000000000000000000000>, C4<0>, C4<0>, C4<0>;
+v0x129829960_0 .net/2u *"_ivl_10", 31 0, L_0x1300780a0;  1 drivers
+L_0x1300780e8 .functor BUFT 1, C4<00000>, C4<0>, C4<0>, C4<0>;
+v0x129829a00_0 .net/2u *"_ivl_14", 4 0, L_0x1300780e8;  1 drivers
+v0x129829ab0_0 .net *"_ivl_16", 0 0, L_0x12982b350;  1 drivers
+v0x129829b50_0 .net *"_ivl_18", 31 0, L_0x12982b4a0;  1 drivers
+v0x129829c40_0 .net *"_ivl_2", 0 0, L_0x12982ae20;  1 drivers
+v0x129829ce0_0 .net *"_ivl_20", 6 0, L_0x12982b540;  1 drivers
+L_0x130078130 .functor BUFT 1, C4<00>, C4<0>, C4<0>, C4<0>;
+v0x129829d90_0 .net *"_ivl_23", 1 0, L_0x130078130;  1 drivers
+L_0x130078178 .functor BUFT 1, C4<00000000000000000000000000000000>, C4<0>, C4<0>, C4<0>;
+v0x129829e40_0 .net/2u *"_ivl_24", 31 0, L_0x130078178;  1 drivers
+v0x129829f50_0 .net *"_ivl_4", 31 0, L_0x12982af60;  1 drivers
+v0x12982a000_0 .net *"_ivl_6", 6 0, L_0x12982b000;  1 drivers
+L_0x130078058 .functor BUFT 1, C4<00>, C4<0>, C4<0>, C4<0>;
+v0x12982a0b0_0 .net *"_ivl_9", 1 0, L_0x130078058;  1 drivers
+v0x12982a160_0 .net "clk", 0 0, v0x12982a8e0_0;  1 drivers
+v0x12982a200_0 .net "rd_addr", 4 0, v0x12982a970_0;  1 drivers
+v0x12982a2b0_0 .net "rd_data", 31 0, v0x12982aa00_0;  1 drivers
+v0x12982a360_0 .net "reg_write_en", 0 0, v0x12982aa90_0;  1 drivers
+v0x12982a400 .array "regfile", 0 31, 31 0;
+v0x12982a590_0 .net "rs1_addr", 4 0, v0x12982ab20_0;  1 drivers
+v0x12982a620_0 .net "rs1_data", 31 0, L_0x12982b1b0;  alias, 1 drivers
+v0x12982a6c0_0 .net "rs2_addr", 4 0, v0x12982aca0_0;  1 drivers
+v0x12982a770_0 .net "rs2_data", 31 0, L_0x12982b6e0;  alias, 1 drivers
+E_0x129808fd0 .event posedge, v0x12982a160_0;
+L_0x12982ae20 .cmp/ne 5, v0x12982ab20_0, L_0x130078010;
+L_0x12982af60 .array/port v0x12982a400, L_0x12982b000;
+L_0x12982b000 .concat [ 5 2 0 0], v0x12982ab20_0, L_0x130078058;
+L_0x12982b1b0 .functor MUXZ 32, L_0x1300780a0, L_0x12982af60, L_0x12982ae20, C4<>;
+L_0x12982b350 .cmp/ne 5, v0x12982aca0_0, L_0x1300780e8;
+L_0x12982b4a0 .array/port v0x12982a400, L_0x12982b540;
+L_0x12982b540 .concat [ 5 2 0 0], v0x12982aca0_0, L_0x130078130;
+L_0x12982b6e0 .functor MUXZ 32, L_0x130078178, L_0x12982b4a0, L_0x12982b350, C4<>;
+    .scope S_0x129808e60;
+T_0 ;
+    %wait E_0x129808fd0;
+    %load/vec4 v0x12982a360_0;
+    %flag_set/vec4 9;
+    %flag_get/vec4 9;
+    %jmp/0 T_0.2, 9;
+    %load/vec4 v0x12982a200_0;
+    %pushi/vec4 0, 0, 5;
+    %cmp/ne;
+    %flag_get/vec4 4;
+    %and;
+T_0.2;
+    %flag_set/vec4 8;
+    %jmp/0xz  T_0.0, 8;
+    %load/vec4 v0x12982a2b0_0;
+    %load/vec4 v0x12982a200_0;
+    %pad/u 7;
+    %ix/vec4 3;
+    %ix/load 4, 0, 0; Constant delay
+    %assign/vec4/a/d v0x12982a400, 0, 4;
+T_0.0 ;
+    %jmp T_0;
+    .thread T_0;
+    .scope S_0x129808cf0;
+T_1 ;
+    %pushi/vec4 0, 0, 1;
+    %store/vec4 v0x12982a8e0_0, 0, 1;
+    %end;
+    .thread T_1;
+    .scope S_0x129808cf0;
+T_2 ;
+    %delay 5, 0;
+    %load/vec4 v0x12982a8e0_0;
+    %inv;
+    %store/vec4 v0x12982a8e0_0, 0, 1;
+    %jmp T_2;
+    .thread T_2;
+    .scope S_0x129808cf0;
+T_3 ;
+    %pushi/vec4 0, 0, 1;
+    %store/vec4 v0x12982aa90_0, 0, 1;
+    %pushi/vec4 0, 0, 5;
+    %store/vec4 v0x12982a970_0, 0, 5;
+    %pushi/vec4 0, 0, 32;
+    %store/vec4 v0x12982aa00_0, 0, 32;
+    %pushi/vec4 0, 0, 5;
+    %store/vec4 v0x12982ab20_0, 0, 5;
+    %pushi/vec4 0, 0, 5;
+    %store/vec4 v0x12982aca0_0, 0, 5;
+    %pushi/vec4 0, 0, 5;
+    %store/vec4 v0x12982ab20_0, 0, 5;
+    %delay 1, 0;
+    %load/vec4 v0x12982abf0_0;
+    %cmpi/e 0, 0, 32;
+    %jmp/0xz  T_3.0, 6;
+    %vpi_call/w 3 33 "$display", "PASS: x0 reads as 0" {0 0 0};
+    %jmp T_3.1;
+T_3.0 ;
+    %vpi_call/w 3 35 "$display", "FAIL: x0 should be 0, got %0d", v0x12982abf0_0 {0 0 0};
+T_3.1 ;
+    %pushi/vec4 1, 0, 5;
+    %store/vec4 v0x12982a970_0, 0, 5;
+    %pushi/vec4 3735928559, 0, 32;
+    %store/vec4 v0x12982aa00_0, 0, 32;
+    %pushi/vec4 1, 0, 1;
+    %store/vec4 v0x12982aa90_0, 0, 1;
+    %wait E_0x129808fd0;
+    %delay 1, 0;
+    %pushi/vec4 0, 0, 1;
+    %store/vec4 v0x12982aa90_0, 0, 1;
+    %pushi/vec4 1, 0, 5;
+    %store/vec4 v0x12982ab20_0, 0, 5;
+    %delay 1, 0;
+    %load/vec4 v0x12982abf0_0;
+    %cmpi/e 3735928559, 0, 32;
+    %jmp/0xz  T_3.2, 6;
+    %vpi_call/w 3 44 "$display", "PASS: x1 reads back 0xDEADBEEF" {0 0 0};
+    %jmp T_3.3;
+T_3.2 ;
+    %vpi_call/w 3 46 "$display", "FAIL: x1 got %h", v0x12982abf0_0 {0 0 0};
+T_3.3 ;
+    %pushi/vec4 2, 0, 5;
+    %store/vec4 v0x12982a970_0, 0, 5;
+    %pushi/vec4 3405691582, 0, 32;
+    %store/vec4 v0x12982aa00_0, 0, 32;
+    %pushi/vec4 1, 0, 1;
+    %store/vec4 v0x12982aa90_0, 0, 1;
+    %wait E_0x129808fd0;
+    %delay 1, 0;
+    %pushi/vec4 0, 0, 1;
+    %store/vec4 v0x12982aa90_0, 0, 1;
+    %pushi/vec4 1, 0, 5;
+    %store/vec4 v0x12982ab20_0, 0, 5;
+    %pushi/vec4 2, 0, 5;
+    %store/vec4 v0x12982aca0_0, 0, 5;
+    %delay 1, 0;
+    %load/vec4 v0x12982abf0_0;
+    %cmpi/e 3735928559, 0, 32;
+    %flag_get/vec4 6;
+    %jmp/0 T_3.6, 6;
+    %load/vec4 v0x12982ad50_0;
+    %pushi/vec4 3405691582, 0, 32;
+    %cmp/e;
+    %flag_get/vec4 6;
+    %and;
+T_3.6;
+    %flag_set/vec4 8;
+    %jmp/0xz  T_3.4, 8;
+    %vpi_call/w 3 55 "$display", "PASS: simultaneous read x1=%h x2=%h", v0x12982abf0_0, v0x12982ad50_0 {0 0 0};
+    %jmp T_3.5;
+T_3.4 ;
+    %vpi_call/w 3 57 "$display", "FAIL: x1=%h x2=%h", v0x12982abf0_0, v0x12982ad50_0 {0 0 0};
+T_3.5 ;
+    %pushi/vec4 0, 0, 5;
+    %store/vec4 v0x12982a970_0, 0, 5;
+    %pushi/vec4 4294967295, 0, 32;
+    %store/vec4 v0x12982aa00_0, 0, 32;
+    %pushi/vec4 1, 0, 1;
+    %store/vec4 v0x12982aa90_0, 0, 1;
+    %wait E_0x129808fd0;
+    %delay 1, 0;
+    %pushi/vec4 0, 0, 1;
+    %store/vec4 v0x12982aa90_0, 0, 1;
+    %pushi/vec4 0, 0, 5;
+    %store/vec4 v0x12982ab20_0, 0, 5;
+    %delay 1, 0;
+    %load/vec4 v0x12982abf0_0;
+    %cmpi/e 0, 0, 32;
+    %jmp/0xz  T_3.7, 6;
+    %vpi_call/w 3 66 "$display", "PASS: write to x0 ignored, still reads 0" {0 0 0};
+    %jmp T_3.8;
+T_3.7 ;
+    %vpi_call/w 3 68 "$display", "FAIL: x0 was written, got %h", v0x12982abf0_0 {0 0 0};
+T_3.8 ;
+    %pushi/vec4 1, 0, 5;
+    %store/vec4 v0x12982ab20_0, 0, 5;
+    %pushi/vec4 1, 0, 5;
+    %store/vec4 v0x12982a970_0, 0, 5;
+    %pushi/vec4 0, 0, 32;
+    %store/vec4 v0x12982aa00_0, 0, 32;
+    %pushi/vec4 0, 0, 1;
+    %store/vec4 v0x12982aa90_0, 0, 1;
+    %wait E_0x129808fd0;
+    %delay 1, 0;
+    %load/vec4 v0x12982abf0_0;
+    %cmpi/e 3735928559, 0, 32;
+    %jmp/0xz  T_3.9, 6;
+    %vpi_call/w 3 75 "$display", "PASS: write disabled, x1 unchanged" {0 0 0};
+    %jmp T_3.10;
+T_3.9 ;
+    %vpi_call/w 3 77 "$display", "FAIL: x1 changed without write enable, got %h", v0x12982abf0_0 {0 0 0};
+T_3.10 ;
+    %vpi_call/w 3 79 "$finish" {0 0 0};
+    %end;
+    .thread T_3;
+# The file index is used to find the file name in the following table.
+:file_names 5;
+    "N/A";
+    "<interactive>";
+    "-";
+    "tb/tb_regfile.sv";
+    "rtl/regfile.sv";
