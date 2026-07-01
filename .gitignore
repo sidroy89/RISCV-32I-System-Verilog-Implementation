@@ -1,0 +1,9 @@
+sim/
+*.vcd
+*.fst
+__pycache__/
+*.pyc
+.DS_Store
+tests/riscv-tests/
+tests/program.hex
+tests/dmem.hex

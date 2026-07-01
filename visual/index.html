@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RISC-V CPU Visualizer</title>
+
+    <!-- CodeMirror -->
+    <link  rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <!-- CodeMirror gas (assembly) mode for syntax highlighting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/gas/gas.min.js"></script>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="dark">
+
+    <!-- ── Top bar ─────────────────────────────────────────────────────────── -->
+    <header id="topbar">
+        <div id="brand">RISC&#8209;V&nbsp;<span class="brand-accent">SC</span>&nbsp;Visualizer</div>
+
+        <div id="instr-info">
+            <span id="cycle-label" class="info-chip">Cycle 0</span>
+            <span id="instr-mnemonic" class="info-main">No program loaded</span>
+            <span id="instr-type"    class="info-chip dim"></span>
+            <span id="pc-display"    class="info-chip dim"></span>
+            <span id="pipe-stages" class="pipe-stages" style="display:none">
+                <span class="pipe-stage-chip">IF: <span id="pipe-if">—</span></span>
+                <span class="pipe-stage-chip">ID: <span id="pipe-id">—</span></span>
+                <span class="pipe-stage-chip">EX: <span id="pipe-ex">—</span></span>
+                <span class="pipe-stage-chip">MEM: <span id="pipe-mem">—</span></span>
+                <span class="pipe-stage-chip">WB: <span id="pipe-wb">—</span></span>
+            </span>
+        </div>
+
+        <div id="controls">
+            <button class="ctrl-btn" id="btn-step-back" title="Step back"  disabled>&#9664;&#9664;</button>
+            <button class="ctrl-btn" id="btn-reset"     title="Reset"      disabled>&#8635;</button>
+            <button class="ctrl-btn" id="btn-step"      title="Step"       disabled>&#9654;&#124;</button>
+            <button class="ctrl-btn primary" id="btn-play"  title="Play"   disabled>&#9654;</button>
+            <button class="ctrl-btn" id="btn-pause"     title="Pause"      disabled style="display:none">&#9646;&#9646;</button>
+            <span   class="ctrl-sep">|</span>
+            <span   id="cycle-counter" class="info-chip">Cycle: 0</span>
+        </div>
+
+        <div id="toolbar-right">
+            <div id="mode-toggle" title="Toggle Single-Cycle / Pipeline (M)">
+                <button class="mode-opt active" id="mode-opt-sc"   data-mode="sc">Single&nbsp;Cycle</button>
+                <button class="mode-opt"        id="mode-opt-pipe" data-mode="pipe">Pipeline</button>
+            </div>
+            <button class="pill-btn" id="btn-format" title="Toggle hex / decimal">HEX</button>
+            <button class="pill-btn" id="btn-theme"  title="Toggle dark / light mode">&#9790;</button>
+            <button class="pill-btn" id="btn-info"   title="About this visualizer">&#9432;</button>
+        </div>
+    </header>
+
+    <!-- ── Main layout ────────────────────────────────────────────────────── -->
+    <div id="main-layout">
+
+        <!-- Left sidebar: editor -->
+        <aside id="sidebar">
+            <div id="sidebar-header">
+                <span class="sidebar-title">Assembly Editor</span>
+                <select id="examples-select" title="Load example program">
+                    <option value="">Examples…</option>
+                    <option value="alu">ALU Operations</option>
+                    <option value="branch">Branch &amp; Loop</option>
+                    <option value="load">Load from Memory</option>
+                    <option value="store">Store to Memory</option>
+                    <option value="forwarding">Forwarding Demo</option>
+                    <option value="loaduse">Load-Use Stall</option>
+                    <option value="branchflush">Branch Flush</option>
+                </select>
+            </div>
+
+            <div id="editor-wrap">
+                <textarea id="editor"></textarea>
+            </div>
+
+            <button id="btn-assemble" class="assemble-btn">Assemble &amp; Load</button>
+
+            <div id="error-panel" class="hidden">
+                <div id="error-panel-title">&#9888; Errors</div>
+                <ul id="error-list"></ul>
+            </div>
+        </aside>
+
+        <!-- SVG datapath canvas -->
+        <div id="canvas-container">
+            <svg id="datapath-svg" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <!-- Arrow markers for each wire state -->
+                    <marker id="arrow-data"     viewBox="0 0 10 10" refX="9" refY="5"
+                            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" class="arrow-data"/>
+                    </marker>
+                    <marker id="arrow-ctrl"     viewBox="0 0 10 10" refX="9" refY="5"
+                            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" class="arrow-ctrl"/>
+                    </marker>
+                    <marker id="arrow-inactive" viewBox="0 0 10 10" refX="9" refY="5"
+                            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" class="arrow-inactive"/>
+                    </marker>
+                    <marker id="arrow-instr"    viewBox="0 0 10 10" refX="9" refY="5"
+                            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#c084fc"/>
+                    </marker>
+                    <marker id="arrow-fwd"      viewBox="0 0 10 10" refX="9" refY="5"
+                            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#4ade80"/>
+                    </marker>
+                </defs>
+
+                <!-- pan+zoom viewport — datapath.js builds everything inside here -->
+                <g id="viewport"></g>
+            </svg>
+
+            <!-- Zoom controls overlay -->
+            <div id="zoom-controls">
+                <button class="zoom-btn" id="btn-zoom-in"  title="Zoom in">+</button>
+                <button class="zoom-btn" id="btn-zoom-out" title="Zoom out">−</button>
+                <button class="zoom-btn" id="btn-zoom-fit" title="Fit to screen">⤢</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Program-ended modal ─────────────────────────────────────────────── -->
+    <div id="modal-overlay" class="hidden">
+        <div id="modal">
+            <div id="modal-header">
+                <h2 id="modal-title">Program Ended</h2>
+                <button id="modal-close" title="Close">&times;</button>
+            </div>
+            <div id="modal-body">
+                <p id="modal-msg"></p>
+                <div id="modal-regs">
+                    <div class="modal-section-title">Final Register State</div>
+                    <div id="modal-reg-grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Info / About modal ──────────────────────────────────────────────── -->
+    <div id="info-overlay">
+        <div id="info-modal">
+            <div id="info-modal-header">
+                <div id="info-modal-title">
+                    RISC&#8209;V <span class="brand-accent">SC</span> Visualizer &mdash; About
+                </div>
+                <div id="info-modal-actions">
+                    <a id="btn-github" class="github-btn" href="https://github.com/sidroy89/RISCV-32I-System-Verilog-Implementation" target="_blank" rel="noopener">
+                        <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" style="flex-shrink:0">
+                            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+                                     0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
+                                     -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66
+                                     .07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15
+                                     -.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27
+                                     .68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12
+                                     .51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48
+                                     0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                        </svg>
+                        View RTL on GitHub
+                    </a>
+                    <button id="info-modal-close" title="Close"
+                            onclick="document.getElementById('info-overlay').style.display='none'">&times;</button>
+                </div>
+            </div>
+
+            <div id="info-modal-body">
+
+                <!-- left column -->
+                <div class="info-col">
+
+                    <div class="info-section">
+                        <div class="info-section-title">What is this?</div>
+                        <p class="info-text">
+                            An interactive, cycle-accurate visualizer for a
+                            <strong>RV32I single-cycle CPU</strong> built in SystemVerilog.
+                            Write RISC-V assembly, assemble it, then step through each cycle
+                            to watch data and control signals flow through every wire in the
+                            datapath in real time.
+                        </p>
+                    </div>
+
+                    <div class="info-section">
+                        <div class="info-section-title">How to Use</div>
+                        <div class="howto-list">
+                            <div class="howto-item"><span class="howto-num">1</span>Write assembly in the editor or pick an example from the dropdown.</div>
+                            <div class="howto-item"><span class="howto-num">2</span>Click <strong>Assemble &amp; Load</strong> to compile and reset the CPU.</div>
+                            <div class="howto-item"><span class="howto-num">3</span>Use <strong>&#9654;|</strong> to step one cycle, <strong>&#9654;</strong> to play continuously, <strong>&#9664;&#9664;</strong> to step back.</div>
+                            <div class="howto-item"><span class="howto-num">4</span>Toggle <strong>HEX</strong> in the toolbar for readable addresses (PC starts at 0x80000000 — see below).</div>
+                            <div class="howto-item"><span class="howto-num">5</span>Pan by dragging the canvas, zoom with scroll or the +/− buttons.</div>
+                        </div>
+                    </div>
+
+                    <div class="info-section">
+                        <div class="info-section-title">Wire Color Legend</div>
+                        <div class="legend-grid">
+                            <div class="legend-item">
+                                <span class="legend-swatch swatch-data"></span>
+                                <div>
+                                    <div class="legend-label">Data wire</div>
+                                    <div class="legend-desc">32-bit values — PC, register data, ALU result, memory read data</div>
+                                </div>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-swatch swatch-ctrl"></span>
+                                <div>
+                                    <div class="legend-label">Control wire (dashed)</div>
+                                    <div class="legend-desc">1-bit signals from the Decoder — mux selects, write-enables, ALU op</div>
+                                </div>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-swatch swatch-instr"></span>
+                                <div>
+                                    <div class="legend-label">Instruction bus</div>
+                                    <div class="legend-desc">Raw 32-bit instruction word, Field Extractor → Decoder</div>
+                                </div>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-swatch swatch-inactive"></span>
+                                <div>
+                                    <div class="legend-label">Inactive wire</div>
+                                    <div class="legend-desc">Path unused this cycle (e.g. memory write during an ALU instruction)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-section">
+                        <div class="info-section-title">Why does the PC start at 0x80000000?</div>
+                        <p class="info-text">
+                            The RISC-V privileged spec reserves <code>0x00000000–0x7FFFFFFF</code>
+                            for memory-mapped I/O and boot ROM. Physical DRAM begins at
+                            <code>0x80000000</code> in virtually all RISC-V SoC designs — so
+                            the PC resets there.
+                        </p>
+                        <p class="info-text">
+                            The official <strong>riscv-tests</strong> compliance suite links
+                            every test binary to this address. As a signed 32-bit integer it
+                            looks like −2,147,483,648, which is why the <strong>HEX</strong>
+                            toggle exists.
+                        </p>
+                    </div>
+
+                    <div class="info-section">
+                        <div class="info-section-title">RV32I Instruction Formats</div>
+                        <div class="fmt-grid">
+                            <div class="fmt-row"><span class="fmt-tag">R</span><code>funct7 | rs2 | rs1 | funct3 | rd | opcode</code><span class="fmt-note">ADD, SUB, AND…</span></div>
+                            <div class="fmt-row"><span class="fmt-tag">I</span><code>imm[11:0] | rs1 | funct3 | rd | opcode</code><span class="fmt-note">ADDI, LW, JALR…</span></div>
+                            <div class="fmt-row"><span class="fmt-tag">S</span><code>imm[11:5] | rs2 | rs1 | funct3 | imm[4:0] | opcode</code><span class="fmt-note">SW, SH, SB</span></div>
+                            <div class="fmt-row"><span class="fmt-tag">B</span><code>imm[12,10:5] | rs2 | rs1 | funct3 | imm[4:1,11] | opcode</code><span class="fmt-note">BEQ, BNE, BLT…</span></div>
+                            <div class="fmt-row"><span class="fmt-tag">U</span><code>imm[31:12] | rd | opcode</code><span class="fmt-note">LUI, AUIPC</span></div>
+                            <div class="fmt-row"><span class="fmt-tag">J</span><code>imm[20,10:1,11,19:12] | rd | opcode</code><span class="fmt-note">JAL</span></div>
+                        </div>
+                    </div>
+
+                </div><!-- /left col -->
+
+                <!-- right column -->
+                <div class="info-col">
+
+                    <div class="info-section">
+                        <div class="info-section-title">Component Guide</div>
+
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-pc">PC</span>
+                            <div class="comp-desc"><strong>Program Counter</strong> — holds the address of the current instruction. Updated every cycle to PC+4 or a branch/jump target.</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-adder">PC+4</span>
+                            <div class="comp-desc"><strong>PC+4 Adder</strong> — always computes the next sequential address. Also written to <em>rd</em> for JAL/JALR as the return address.</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-adder">PC/RS1+Imm</span>
+                            <div class="comp-desc"><strong>Branch Target Adder</strong> — computes <code>PC+imm</code> for branches/JAL or <code>rs1+imm</code> for JALR (selected by MUX T).</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-mux">MUX</span>
+                            <div class="comp-desc"><strong>Next-PC MUX</strong> — selects between PC+4 and the branch target. Driven by <em>pc_src</em> from Branch Logic.</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-imem">IMEM</span>
+                            <div class="comp-desc"><strong>Instruction Memory</strong> — read-only. The PC is the address; the 32-bit instruction word is output combinationally each cycle.</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-imem">FE</span>
+                            <div class="comp-desc"><strong>Field Extractor</strong> — splits the instruction into opcode[6:0], rd[11:7], funct3[14:12], rs1[19:15], rs2[24:20], funct7[31:25].</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-imem">IMM GEN</span>
+                            <div class="comp-desc"><strong>Immediate Generator</strong> — sign-extends the immediate field. Handles all six RV32I formats (R/I/S/B/U/J) based on opcode.</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-rf">RF</span>
+                            <div class="comp-desc"><strong>Register File</strong> — 32 × 32-bit registers (x0–x31). x0 is hardwired to zero. Two async reads (rs1, rs2), one sync write (rd).</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-mux">MUX A/B</span>
+                            <div class="comp-desc"><strong>ALU Source MUXes</strong> — MUX A picks rs1 or PC (AUIPC). MUX B picks rs2 or sign-extended immediate (I/S/B/U/J-type).</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-alu">ALU</span>
+                            <div class="comp-desc"><strong>Arithmetic Logic Unit</strong> — ADD, SUB, AND, OR, XOR, SLL, SRL, SRA, SLT, SLTU, PASS_B (LUI). Outputs a <em>zero</em> flag for branches.</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-branch">Branch</span>
+                            <div class="comp-desc"><strong>Branch Logic</strong> — evaluates the branch condition using funct3 and the ALU result. Outputs <em>pc_src</em> to the Next-PC MUX.</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-dmem">DMEM</span>
+                            <div class="comp-desc"><strong>Data Memory</strong> — byte-addressable read/write memory. Supports byte, halfword, and word accesses (LB/LH/LW, SB/SH/SW) via funct3.</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-mux">WB MUX</span>
+                            <div class="comp-desc"><strong>Writeback MUX</strong> — selects the value written to <em>rd</em>: ALU result, memory read data (loads), or PC+4 (JAL/JALR).</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-dec">Decoder</span>
+                            <div class="comp-desc"><strong>Decoder / Control Unit</strong> — purely combinational. Decodes opcode+funct3+funct7 into all control signals: reg_write_en, alu_op, alu_src_mux_1/2, dmem_wr_en, dmem_rd_en, writeback_mux, branch, jump, PC_or_Rs1_mux.</div>
+                        </div>
+                    </div>
+
+                </div><!-- /right col -->
+
+            </div><!-- /info-modal-body -->
+        </div><!-- /info-modal -->
+    </div><!-- /info-overlay -->
+
+    <!-- ── Pipeline Info / About modal ──────────────────────────────────────── -->
+    <div id="info-overlay-pipe">
+        <div id="info-modal-pipe">
+            <div id="info-modal-header">
+                <div id="info-modal-title">
+                    RISC&#8209;V <span class="brand-accent">Pipeline</span> Visualizer &mdash; About
+                </div>
+                <div id="info-modal-actions">
+                    <a class="github-btn" href="https://github.com/sidroy89/RISCV-32I-System-Verilog-Implementation" target="_blank" rel="noopener">
+                        <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" style="flex-shrink:0">
+                            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+                                     0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
+                                     -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66
+                                     .07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15
+                                     -.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27
+                                     .68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12
+                                     .51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48
+                                     0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                        </svg>
+                        View RTL on GitHub
+                    </a>
+                    <button id="info-modal-pipe-close" title="Close">&times;</button>
+                </div>
+            </div>
+
+            <div id="info-modal-body">
+
+                <!-- left column -->
+                <div class="info-col">
+
+                    <div class="info-section">
+                        <div class="info-section-title">What is this?</div>
+                        <p class="info-text">
+                            An interactive, cycle-accurate visualizer for a
+                            <strong>RV32I 5-stage pipelined CPU</strong> built in SystemVerilog.
+                            Up to five instructions execute simultaneously — one per stage.
+                            Watch pipeline registers latch values, forwarding paths activate,
+                            and stall/flush bubbles propagate in real time.
+                        </p>
+                    </div>
+
+                    <div class="info-section">
+                        <div class="info-section-title">How to Use</div>
+                        <div class="howto-list">
+                            <div class="howto-item"><span class="howto-num">1</span>Write assembly or pick a pipeline example (Forwarding, Load-Use Stall, Branch Flush).</div>
+                            <div class="howto-item"><span class="howto-num">2</span>Click <strong>Assemble &amp; Load</strong> to compile and reset the CPU.</div>
+                            <div class="howto-item"><span class="howto-num">3</span>Use <strong>&#9654;|</strong> to step one cycle — each step advances all five stages simultaneously.</div>
+                            <div class="howto-item"><span class="howto-num">4</span>Watch the stage chips in the header: they show which instruction is in each stage this cycle.</div>
+                            <div class="howto-item"><span class="howto-num">5</span>Green forwarding wires light up when data is bypassed; pipeline registers turn red on flush / dim on stall.</div>
+                            <div class="howto-item"><span class="howto-num">6</span>Step back with <strong>&#9664;&#9664;</strong> to replay any previous cycle (up to 500 cycles of history).</div>
+                        </div>
+                    </div>
+
+                    <div class="info-section">
+                        <div class="info-section-title">Wire Color Legend</div>
+                        <div class="legend-grid">
+                            <div class="legend-item">
+                                <span class="legend-swatch swatch-data"></span>
+                                <div>
+                                    <div class="legend-label">Data wire</div>
+                                    <div class="legend-desc">32-bit values — PC, register data, ALU result, memory read data</div>
+                                </div>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-swatch swatch-ctrl"></span>
+                                <div>
+                                    <div class="legend-label">Control wire (dashed)</div>
+                                    <div class="legend-desc">1-bit signals — mux selects, write-enables, branch/jump, ALU op</div>
+                                </div>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-swatch swatch-fwd"></span>
+                                <div>
+                                    <div class="legend-label">Forwarding wire</div>
+                                    <div class="legend-desc">Bypass paths that carry a result from a later pipeline stage back to the EX stage inputs</div>
+                                </div>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-swatch swatch-inactive"></span>
+                                <div>
+                                    <div class="legend-label">Inactive wire</div>
+                                    <div class="legend-desc">Path unused this cycle</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-section">
+                        <div class="info-section-title">The 5 Pipeline Stages</div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-pc">IF</span>
+                            <div class="comp-desc"><strong>Instruction Fetch</strong> — PC drives IMEM; output latched into IF/ID pipeline register. PC updates to PC+4 or branch target.</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-imem">ID</span>
+                            <div class="comp-desc"><strong>Instruction Decode</strong> — Field Extractor splits bits, Decoder produces control signals, Register File reads rs1/rs2, Imm Gen sign-extends the immediate. Everything latches into ID/EX.</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-alu">EX</span>
+                            <div class="comp-desc"><strong>Execute</strong> — Forwarding muxes select the freshest rs1/rs2 values, ALU input muxes add the immediate if needed, ALU computes the result. Branch Logic decides pc_src. Results latch into EX/MEM.</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-dmem">MEM</span>
+                            <div class="comp-desc"><strong>Memory</strong> — Data Memory is read (load) or written (store). All other instructions pass through. Results latch into MEM/WB.</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-rf">WB</span>
+                            <div class="comp-desc"><strong>Writeback</strong> — WB MUX selects between ALU result, memory read data, or PC+4. The chosen value is written back to the Register File.</div>
+                        </div>
+                    </div>
+
+                </div><!-- /left col -->
+
+                <!-- right column -->
+                <div class="info-col">
+
+                    <div class="info-section">
+                        <div class="info-section-title">Hazard Handling</div>
+
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-branch">FWD</span>
+                            <div class="comp-desc"><strong>Data Forwarding (EX stage)</strong> — The Forwarding Unit detects when an instruction in EX needs a value that is still in EX/MEM or MEM/WB (not yet written back). It steers the forwarding muxes (FA, FB) to bypass the pipeline register directly. Eliminates most RAW hazards with zero penalty.</div>
+                        </div>
+
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-dec">HAZ</span>
+                            <div class="comp-desc"><strong>Load-Use Stall (Hazard Unit)</strong> — A load followed immediately by an instruction that uses the loaded value cannot be forwarded (the data isn't ready until end of MEM). The Hazard Unit inserts one bubble: it stalls IF and ID by freezing their pipeline registers and injects a NOP into EX. The pipeline register turns dim to show the stall.</div>
+                        </div>
+
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-branch">BR</span>
+                            <div class="comp-desc"><strong>Branch Flush (always not-taken)</strong> — Branches are resolved in EX. The CPU always fetches PC+4 speculatively. If the branch is taken, the two instructions already in IF and ID are wrong — the Hazard Unit flushes them by writing NOP bubbles into IF/ID and ID/EX. Pipeline registers turn red to show the flush. Cost: 2 cycles per taken branch.</div>
+                        </div>
+                    </div>
+
+                    <div class="info-section">
+                        <div class="info-section-title">EX Stage Component Guide</div>
+
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-mux">FA / FB</span>
+                            <div class="comp-desc"><strong>Forwarding MUXes</strong> — Select the freshest value for rs1 (FA) and rs2 (FB): 00 = register file, 01 = EX/MEM bypass, 10 = MEM/WB bypass. Controlled by the Forwarding Unit.</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-mux">MUX A/B</span>
+                            <div class="comp-desc"><strong>ALU Source MUXes</strong> — MUX A picks rs1 or PC (AUIPC). MUX B picks rs2 or sign-extended immediate. Selected by alu_src_mux_1/2 control signals from ID/EX.</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-alu">ALU</span>
+                            <div class="comp-desc"><strong>Arithmetic Logic Unit</strong> — ADD, SUB, AND, OR, XOR, SLL, SRL, SRA, SLT, SLTU, PASS_B (LUI). The alu_op select comes from ID/EX Ctrl, entering the ALU from below.</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-adder">PC+I / PC+4</span>
+                            <div class="comp-desc"><strong>Branch Target Adders</strong> — PC+Imm computes the branch/JAL target. PC+4 computes the return address for JAL/JALR. Both feed the Branch MUX.</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-mux">MUX</span>
+                            <div class="comp-desc"><strong>Branch MUX (BR_MUX)</strong> — Selects between PC+Imm (branches, JAL) and rs1+Imm (JALR). The select bit (PC_or_Rs1_mux) comes from ID/EX Ctrl.</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-branch">Branch</span>
+                            <div class="comp-desc"><strong>Branch Logic</strong> — Takes alu_result, funct3, branch, jump signals. Outputs pc_src: 1 = take branch/jump, 0 = PC+4. pc_src feeds back to the IF stage NEXT_MUX.</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-branch">FWD Unit</span>
+                            <div class="comp-desc"><strong>Forwarding Unit</strong> — Compares rs1/rs2 addresses from ID/EX against rd addresses in EX/MEM and MEM/WB. Outputs forward_a and forward_b 2-bit selects for FA/FB.</div>
+                        </div>
+                        <div class="comp-entry">
+                            <span class="comp-tag tag-dec">HAZ Unit</span>
+                            <div class="comp-desc"><strong>Hazard Detection Unit</strong> — Monitors ID/EX mem_read and rs1/rs2 addresses from IF/ID. Asserts stall when a load-use hazard is detected; triggers flush on taken branches.</div>
+                        </div>
+                    </div>
+
+                </div><!-- /right col -->
+
+            </div><!-- /info-modal-body -->
+        </div><!-- /info-modal-pipe -->
+    </div><!-- /info-overlay-pipe -->
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
